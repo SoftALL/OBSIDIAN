@@ -11,11 +11,16 @@ st.set_page_config(page_title="OBSIDIAN Arabic Tweet Classifier", layout="wide")
 
 st.title("OBSIDIAN Arabic Tweet Classifier")
 st.write("AraBERT-based classification for Arabic tweets/text into 5 classes.")
-st.info("Use Single Text for one input, or Batch Upload for CSV/XLSX files containing a text column such as cleaned_text.")
+st.info(
+    "Use Single Text for one input, or Batch Upload for CSV/XLSX files containing "
+    "a text column such as cleaned_text, Text, text, tweet, tweet_text, or content."
+)
+
 
 @st.cache_resource
 def get_model():
     return load_model_and_tokenizer()
+
 
 try:
     tokenizer, model = get_model()
@@ -49,7 +54,12 @@ with tab1:
                 "Probability": list(result["probabilities"].values())
             })
 
-            fig = px.bar(probs_df, x="Label", y="Probability", title="Prediction Probabilities")
+            fig = px.bar(
+                probs_df,
+                x="Label",
+                y="Probability",
+                title="Prediction Probabilities"
+            )
             st.plotly_chart(fig, width="stretch")
 
 with tab2:
@@ -60,7 +70,11 @@ with tab2:
         try:
             df = load_uploaded_file(uploaded_file)
 
-            st.write("Preview of uploaded data:")
+            total_rows = len(df)
+            total_cols = len(df.columns)
+
+            st.write(f"Uploaded file contains **{total_rows} rows** and **{total_cols} columns**.")
+            st.write("Preview of uploaded data (showing first 10 rows):")
             st.dataframe(df.head(10), width="stretch")
 
             candidate_cols = get_text_column_candidates(df)
@@ -74,7 +88,8 @@ with tab2:
             else:
                 st.error(
                     "No supported text column was detected automatically.\n\n"
-                    "Expected one of these columns: cleaned_text, text, tweet, tweet_text, content."
+                    "Expected one of these column names (case-insensitive): "
+                    "cleaned_text, text, tweet, tweet_text, content."
                 )
                 st.write("Available columns in your file:")
                 st.write(list(df.columns))
@@ -84,7 +99,7 @@ with tab2:
                 st.caption(f"Selected text column: {selected_text_col}")
 
                 preview_df = df[[selected_text_col]].head(5).copy()
-                st.write("Preview of the selected text column:")
+                st.write("Preview of the selected text column (showing first 5 rows):")
                 st.dataframe(preview_df, width="stretch")
 
                 if st.button("Run Batch Prediction", width="stretch"):
@@ -93,16 +108,23 @@ with tab2:
                     else:
                         result_df = run_batch_inference(df, tokenizer, model, selected_text_col)
 
-                        st.success(f"Predictions completed successfully using column: {selected_text_col}")
+                        st.success(
+                            f"Predictions completed successfully using column: {selected_text_col}"
+                        )
 
                         display_cols = [selected_text_col, "predicted_label", "confidence_percent"]
-                        st.write("Preview of classification results:")
+                        st.write("Preview of classification results (showing first 20 rows):")
                         st.dataframe(result_df[display_cols].head(20), width="stretch")
 
                         counts = result_df["predicted_label"].value_counts().reset_index()
                         counts.columns = ["Label", "Count"]
 
-                        fig = px.pie(counts, names="Label", values="Count", title="Predicted Label Distribution")
+                        fig = px.pie(
+                            counts,
+                            names="Label",
+                            values="Count",
+                            title="Predicted Label Distribution"
+                        )
                         st.plotly_chart(fig, width="stretch")
 
                         csv_data = result_df.to_csv(index=False).encode("utf-8-sig")
