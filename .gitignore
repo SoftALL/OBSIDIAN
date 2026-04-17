@@ -6,6 +6,7 @@ venv/
 outputs/*
 !outputs/.gitkeep
 .DS_Store
-model/model.safetensors
+model/*.safetensors
+model/*.bin
 .streamlit/secrets.toml
 *.crdownload
