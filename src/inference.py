@@ -12,7 +12,7 @@ def load_model_and_tokenizer():
     return tokenizer, model
 
 
-def predict_text(text, tokenizer, model, max_length=512):
+def predict_text(text, tokenizer, model, max_length=128):
     inputs = tokenizer(
         text,
         return_tensors="pt",
