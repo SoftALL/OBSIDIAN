@@ -124,7 +124,7 @@ with tab2:
     st.caption("Upload a CSV or XLSX file, choose the text column, and run batch prediction.")
 
     uploaded_file = st.file_uploader("Upload CSV or XLSX file", type=["csv", "xlsx"])
-
+    st.caption("You can test the app using the sample file provided in the repository: data_samples/sample_test.csv")
     if uploaded_file is not None:
         try:
             df = load_uploaded_file(uploaded_file)
