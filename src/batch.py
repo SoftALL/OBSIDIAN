@@ -3,23 +3,17 @@ from src.preprocess import clean_text
 from src.inference import predict_text
 
 
-def detect_text_column(df: pd.DataFrame):
+def get_text_column_candidates(df: pd.DataFrame):
     candidates = ["cleaned_text", "text", "tweet", "tweet_text", "content"]
-    for col in candidates:
-        if col in df.columns:
-            return col
-    return None
+    return [col for col in candidates if col in df.columns]
 
 
-def run_batch_inference(df: pd.DataFrame, tokenizer, model):
-    text_col = detect_text_column(df)
-    if text_col is None:
-        raise ValueError(
-            "No supported text column found. Use one of: cleaned_text, text, tweet, tweet_text, content."
-        )
+def run_batch_inference(df: pd.DataFrame, tokenizer, model, text_col: str):
+    if text_col not in df.columns:
+        raise ValueError(f"Selected text column '{text_col}' does not exist in the uploaded file.")
 
     result_df = df.copy()
-    result_df[text_col] = result_df[text_col].astype(str).fillna("").apply(clean_text)
+    result_df[text_col] = result_df[text_col].fillna("").astype(str).apply(clean_text)
 
     labels = []
     confidences = []
@@ -31,4 +25,6 @@ def run_batch_inference(df: pd.DataFrame, tokenizer, model):
 
     result_df["predicted_label"] = labels
     result_df["confidence"] = confidences
-    return result_df, text_col
+    result_df["confidence_percent"] = result_df["confidence"].apply(lambda x: f"{x:.2%}")
+
+    return result_df
