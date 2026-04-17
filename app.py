@@ -11,6 +11,7 @@ st.set_page_config(page_title="OBSIDIAN Arabic Tweet Classifier", layout="wide")
 
 st.title("OBSIDIAN Arabic Tweet Classifier")
 st.write("AraBERT-based classification for Arabic tweets/text into 5 classes.")
+st.info("Use Single Text for one input, or Batch Upload for CSV/XLSX files containing a text column such as cleaned_text.")
 
 @st.cache_resource
 def get_model():
@@ -31,7 +32,7 @@ with tab1:
     st.subheader("Classify a single Arabic text")
     user_text = st.text_area("Enter Arabic text", height=150)
 
-    if st.button("Predict", use_container_width=True):
+    if st.button("Predict", width="stretch"):
         if not user_text.strip():
             st.error("Please enter some text first.")
         elif not model_loaded:
@@ -49,7 +50,7 @@ with tab1:
             })
 
             fig = px.bar(probs_df, x="Label", y="Probability")
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
 
 with tab2:
     st.subheader("Batch classify CSV/XLSX")
@@ -59,22 +60,22 @@ with tab2:
         try:
             df = load_uploaded_file(uploaded_file)
             st.write("Preview of uploaded data:")
-            st.dataframe(df.head(), use_container_width=True)
+            st.dataframe(df.head(), width="stretch")
 
-            if st.button("Run Batch Prediction", use_container_width=True):
+            if st.button("Run Batch Prediction", width="stretch"):
                 if not model_loaded:
                     st.error("Model is not loaded.")
                 else:
                     result_df, detected_col = run_batch_inference(df, tokenizer, model)
 
                     st.success(f"Predictions completed using text column: {detected_col}")
-                    st.dataframe(result_df.head(20), use_container_width=True)
+                    st.dataframe(result_df.head(20), width="stretch")
 
                     counts = result_df["predicted_label"].value_counts().reset_index()
                     counts.columns = ["Label", "Count"]
 
                     fig = px.pie(counts, names="Label", values="Count")
-                    st.plotly_chart(fig, use_container_width=True)
+                    st.plotly_chart(fig, width="stretch")
 
                     csv_data = result_df.to_csv(index=False).encode("utf-8-sig")
                     st.download_button(
@@ -82,7 +83,7 @@ with tab2:
                         data=csv_data,
                         file_name="obsidian_predictions.csv",
                         mime="text/csv",
-                        use_container_width=True
+                        width="stretch"
                     )
 
         except Exception as e:

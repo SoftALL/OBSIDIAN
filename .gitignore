@@ -7,3 +7,5 @@ outputs/*
 !outputs/.gitkeep
 .DS_Store
 model/model.safetensors
+.streamlit/secrets.toml
+*.crdownload
