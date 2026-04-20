@@ -1,13 +1,12 @@
-from pathlib import Path
 import torch
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 
-MODEL_DIR = Path("model")
+MODEL_SOURCE = "SoftALL/OBSIDIAN"
 
 
 def load_model_and_tokenizer():
-    tokenizer = AutoTokenizer.from_pretrained(MODEL_DIR)
-    model = AutoModelForSequenceClassification.from_pretrained(MODEL_DIR)
+    tokenizer = AutoTokenizer.from_pretrained(MODEL_SOURCE)
+    model = AutoModelForSequenceClassification.from_pretrained(MODEL_SOURCE)
     model.eval()
     return tokenizer, model
 
