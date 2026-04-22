@@ -16,11 +16,8 @@
   - [Batch Upload Mode](#batch-upload-mode)
 - [Sample Test File](#sample-test-file)
 - [Preprocessing and Inference Notes](#preprocessing-and-inference-notes)
-- [Deployment Notes](#deployment-notes)
-- [Current Limitations](#current-limitations)
 - [Original Notebook Context](#original-notebook-context)
-- [Status](#status)
-- [Future Improvements](#future-improvements)
+
 
 ## Project Overview
 
@@ -286,28 +283,6 @@ Inference is aligned with the trained setup by using:
 - the uploaded Hugging Face model repo
 - `max_length=128`
 
-## Deployment Notes
-
-The project has been prepared for Streamlit deployment using:
-- public GitHub code under **SoftALL/OBSIDIAN**
-- public Hugging Face model hosting under **SoftALL/OBSIDIAN**
-
-This setup is convenient for demos, but there are still tradeoffs:
-- the first cold start can be slow
-- the model is relatively large
-- a more efficient long-term architecture would separate the inference backend from the Streamlit frontend
-
-## Current Limitations
-
-- the Hugging Face model file is large, so first-time startup can take time
-- batch prediction currently runs row by row, so large files may take noticeable time
-- preview tables intentionally show only a subset of rows:
-  - uploaded data preview: first 10 rows
-  - selected text preview: first 5 rows
-  - results preview: first 20 rows
-- some class boundaries may overlap in difficult examples, especially between **Threat** and **Distress**
-- the current architecture is suitable for demos, but not the most efficient production architecture
-
 ## Original Notebook Context
 
 The original notebooks were used as reference material for:
@@ -317,25 +292,3 @@ The original notebooks were used as reference material for:
 - prototype inference logic
 
 This repository is the cleaned application layer built from that earlier notebook-based work.
-
-## Status
-
-Current status:
-- GitHub repo organized under **SoftALL**
-- Hugging Face model repo created under **SoftALL**
-- model files uploaded successfully
-- Streamlit app works locally
-- single-text prediction works
-- batch prediction works
-- sample test file included
-- project branding assets added
-
-## Future Improvements
-
-Possible next improvements:
-- split the system into **frontend + inference API**
-- keep the model loaded in a backend service instead of the Streamlit process
-- improve batch inference speed
-- add richer analytics to batch mode
-- add deployment screenshots and final public demo link
-- optimize cold-start performance for public deployment
