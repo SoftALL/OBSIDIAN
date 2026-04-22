@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/obsidian_logo.png" alt="OBSIDIAN logo" width="260">
+  <img src="assets/obsidian_banner.jpeg" alt="OBSIDIAN banner" width="360">
 </p>
 
 # OBSIDIAN
@@ -295,7 +295,3 @@ The original notebooks were used as reference material for:
 - prototype inference logic
 
 This repository is the cleaned application layer built from that earlier notebook-based work.
-
-<p align="center">
-  <img src="assets/obsidian_banner.jpeg" alt="OBSIDIAN banner" width="720">
-</p>
