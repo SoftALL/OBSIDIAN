@@ -12,28 +12,69 @@ def apply_custom_branding():
         """
         <style>
         .block-container {
-            padding-top: 1.5rem;
+            padding-top: 2rem;
             padding-bottom: 2rem;
         }
 
+        .obsidian-hero {
+            background: linear-gradient(180deg, #162A36 0%, #10202B 100%);
+            border: 1px solid #233847;
+            border-radius: 18px;
+            padding: 1rem 1.1rem;
+            margin-bottom: 1rem;
+        }
+
+        .obsidian-title {
+            font-size: 3rem;
+            font-weight: 800;
+            color: #F5F1E8;
+            line-height: 1;
+            margin-bottom: 0.45rem;
+        }
+
+        .obsidian-subtitle {
+            font-size: 1.05rem;
+            color: #CFC6B8;
+            margin-bottom: 0.8rem;
+        }
+
+        .obsidian-description {
+            color: #D9E1E7;
+            font-size: 1rem;
+            margin-bottom: 0.9rem;
+        }
+
+        .obsidian-tag {
+            display: inline-block;
+            padding: 0.32rem 0.72rem;
+            margin: 0.2rem 0.4rem 0 0;
+            border-radius: 999px;
+            background-color: #1D3342;
+            border: 1px solid #314A5B;
+            color: #F5F1E8;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
         div[data-testid="stMetric"] {
-            background-color: #101B25;
-            border: 1px solid #1D2B38;
+            background-color: #162A36;
+            border: 1px solid #2B4252;
             padding: 1rem;
             border-radius: 14px;
         }
 
         div.stButton > button {
-            background-color: #E8E0D3;
-            color: #07131C;
+            background-color: #E6D8C2;
+            color: #10202B;
             border: none;
-            border-radius: 10px;
+            border-radius: 12px;
             font-weight: 700;
+            height: 2.9rem;
         }
 
         div.stButton > button:hover {
-            background-color: #D9CDB8;
-            color: #07131C;
+            background-color: #D9CAB1;
+            color: #10202B;
         }
 
         div[data-baseweb="tab-list"] {
@@ -46,16 +87,10 @@ def apply_custom_branding():
             padding-right: 1rem;
         }
 
-        .obsidian-subtitle {
-            font-size: 1.05rem;
-            color: #CFC6B8;
-            margin-top: -0.4rem;
-            margin-bottom: 0.8rem;
-        }
-
         .obsidian-section-note {
             color: #CFC6B8;
             font-size: 0.95rem;
+            margin-bottom: 0.3rem;
         }
         </style>
         """,
@@ -65,67 +100,78 @@ def apply_custom_branding():
 st.set_page_config(page_title="OBSIDIAN Arabic Tweet Classifier", layout="wide")
 apply_custom_branding()
 
-header_col1, header_col2 = st.columns([1, 3])
+with st.container():
+    st.markdown('<div class="obsidian-hero">', unsafe_allow_html=True)
 
-with header_col1:
-    st.image("assets/obsidian_logo.png", width=190)
+    hero_col1, hero_col2 = st.columns([0.45, 5.55], gap="small", vertical_alignment="center")
 
-with header_col2:
-    st.title("OBSIDIAN")
-    st.markdown(
-        '<div class="obsidian-subtitle">Real-time social media intelligence and threat detection system</div>',
-        unsafe_allow_html=True
-    )
-    st.markdown(
-        """
-        This app uses a fine-tuned **AraBERT** model to classify Arabic tweets and short texts into **5 categories**:
+    with hero_col1:
+        st.image("assets/Crystal.png", width=140)
 
-        - **Threat**
-        - **Violence**
-        - **Distress**
-        - **Complaint**
-        - **Neutral**
-        """
-    )
+    with hero_col2:
+        st.markdown('<div class="obsidian-title">OBSIDIAN</div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div class="obsidian-subtitle">Real-time social media intelligence and threat detection system</div>',
+            unsafe_allow_html=True
+        )
+        st.markdown(
+            '<div class="obsidian-description">Arabic tweet and short-text classification powered by a fine-tuned AraBERT model.</div>',
+            unsafe_allow_html=True
+        )
+        st.markdown(
+            """
+            <span class="obsidian-tag">Threat</span>
+            <span class="obsidian-tag">Violence</span>
+            <span class="obsidian-tag">Distress</span>
+            <span class="obsidian-tag">Complaint</span>
+            <span class="obsidian-tag">Neutral</span>
+            """,
+            unsafe_allow_html=True
+        )
 
-st.info("Choose **Single Text** to classify one Arabic sentence, or **Batch Upload** to classify a CSV/XLSX file.")
-st.markdown("---")
+    st.markdown('</div>', unsafe_allow_html=True)
 
-with st.expander("How to use this app"):
-    st.markdown(
-        """
-        **Single Text**
-        - Paste one Arabic sentence or tweet
-        - Click **Predict**
-        - Review the predicted label, confidence, and probability chart
+st.markdown("")
 
-        **Batch Upload**
-        - Upload a CSV or XLSX file
-        - Select the text column to classify
-        - Click **Run Batch Prediction**
-        - Review the preview, label distribution chart, and download the full results
-        """
-    )
+exp_col1, exp_col2 = st.columns(2)
 
-with st.expander("Example Arabic inputs"):
-    st.markdown(
-        """
-        **Threat**
-        - سأقتلك إذا رأيتك مرة أخرى
+with exp_col1:
+    with st.expander("How to use this app"):
+        st.markdown(
+            """
+            **Single Text**
+            - Paste one Arabic sentence or tweet
+            - Click **Predict**
+            - Review the predicted label, confidence, and probability chart
 
-        **Violence**
-        - قاموا بضرب الرجل في الشارع بعنف شديد
+            **Batch Upload**
+            - Upload a CSV or XLSX file
+            - Select the text column to classify
+            - Click **Run Batch Prediction**
+            - Review the preview, label distribution chart, and download the full results
+            """
+        )
 
-        **Distress**
-        - أنا خائف جدًا ولا أعرف ماذا أفعل، أحتاج مساعدة
+with exp_col2:
+    with st.expander("Example Arabic inputs"):
+        st.markdown(
+            """
+            **Threat**
+            - سأقتلك إذا رأيتك مرة أخرى
 
-        **Complaint**
-        - الخدمة سيئة جدًا والتطبيق يتعطل كل مرة
+            **Violence**
+            - قاموا بضرب الرجل في الشارع بعنف شديد
 
-        **Neutral**
-        - الجو اليوم معتدل والناس في الحديقة
-        """
-    )
+            **Distress**
+            - أنا خائف جدًا ولا أعرف ماذا أفعل، أحتاج مساعدة
+
+            **Complaint**
+            - الخدمة سيئة جدًا والتطبيق يتعطل كل مرة
+
+            **Neutral**
+            - الجو اليوم معتدل والناس في الحديقة
+            """
+        )
 
 
 @st.cache_resource
@@ -148,7 +194,7 @@ with tab1:
     st.subheader("Single Text Classification")
     st.markdown('<div class="obsidian-section-note">Enter one Arabic text or tweet, then click Predict.</div>', unsafe_allow_html=True)
 
-    user_text = st.text_area("Arabic text", height=150, placeholder="اكتب النص العربي هنا...")
+    user_text = st.text_area("Arabic text", height=150, placeholder= "Enter Arabic text here...")
 
     if st.button("Predict", width="stretch"):
         if not user_text.strip():
