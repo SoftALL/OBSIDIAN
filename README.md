@@ -1,54 +1,79 @@
-# OBSIDIAN Arabic Tweet Classifier
+# OBSIDIAN
 
 ## Table of Contents
 
 - [Project Overview](#project-overview)
-- [Task / Objective](#task--objective)
+- [Objective](#objective)
+- [Current Architecture](#current-architecture)
+- [Repositories and Hosting](#repositories-and-hosting)
 - [Label Definitions](#label-definitions)
-- [Folder Structure](#folder-structure)
-- [Required Model Files](#required-model-files)
-- [Installation Steps](#installation-steps)
+- [Project Structure](#project-structure)
+- [Model Hosting Details](#model-hosting-details)
+- [Installation](#installation)
 - [How to Run Locally](#how-to-run-locally)
-- [How to Use Single-Text Mode](#how-to-use-single-text-mode)
-- [How to Use Batch Mode](#how-to-use-batch-mode)
-- [Preprocessing Notes](#preprocessing-notes)
+- [How to Use the App](#how-to-use-the-app)
+  - [Single Text Mode](#single-text-mode)
+  - [Batch Upload Mode](#batch-upload-mode)
+- [Sample Test File](#sample-test-file)
+- [Preprocessing and Inference Notes](#preprocessing-and-inference-notes)
+- [Deployment Notes](#deployment-notes)
 - [Current Limitations](#current-limitations)
-- [Notes on the Original Notebooks](#notes-on-the-original-notebooks)
-- [Suggested Git Workflow](#suggested-git-workflow)
+- [Original Notebook Context](#original-notebook-context)
 - [Status](#status)
 - [Future Improvements](#future-improvements)
 
 ## Project Overview
 
-A Streamlit-based application for classifying Arabic tweets or short texts using a fine-tuned **AraBERT** model.
+**OBSIDIAN** is a Streamlit-based application for classifying Arabic tweets or short texts using a fine-tuned **AraBERT** model.
 
 The app supports:
 - **Single-text classification**
 - **Batch classification** from CSV/XLSX files
 - **Prediction confidence display**
-- **Label distribution visualization**
-- **Downloadable batch results**
+- **Class probability visualization**
+- **Batch result download as CSV**
 
-This project converts Abdullah’s notebook-based OBSIDIAN prototype into a cleaner, GitHub-organized Streamlit application.
+This project turns Abdullah's notebook-based Colab work into a cleaner, organized application that can be reviewed, tested, and deployed more easily.
 
-The model classifies Arabic tweets or short texts into 5 categories:
+The model classifies Arabic text into **5 categories**:
 - **Threat**
 - **Violence**
 - **Distress**
 - **Complaint**
 - **Neutral**
 
-The goal is to provide a more usable interface for testing and demonstrating the trained model without relying directly on the original notebooks.
+## Objective
 
-## Task / Objective
-
-The objective of this project is to:
-- organize the original notebook-based work into a clean application structure
+The goal of this project is to:
+- convert the original Colab prototype into a clean GitHub project
 - provide a user-friendly Streamlit interface
-- support both single-text and batch-file prediction
-- make the project easier to run, test, review, and hand off
+- support both single-text and batch prediction workflows
+- separate code, model hosting, and deployment more clearly
+- make the project easier to test, demonstrate, and hand off
 
-This repository is intended to be the application version of the OBSIDIAN project, while the original notebooks remain useful as research and development references.
+## Current Architecture
+
+The current deployed-style setup is:
+
+- **GitHub** hosts the application code
+- **Hugging Face** hosts the fine-tuned model files
+- **Streamlit** runs the user interface
+- The app loads the model from the Hugging Face model repo:
+  - `SoftALL/OBSIDIAN`
+
+This means the application no longer depends on a local `model.safetensors` file inside the GitHub repository.
+
+## Repositories and Hosting
+
+### GitHub repository
+- Organization: **SoftALL**
+- Repository: **OBSIDIAN**
+
+### Hugging Face model repository
+- Organization: **SoftALL**
+- Model repository: **OBSIDIAN**
+
+The Hugging Face model repo is used to host the model assets required for inference.
 
 ## Label Definitions
 
@@ -71,7 +96,7 @@ Text expressing fear, panic, emotional suffering, helplessness, or need for help
 `أنا خائف جدًا ولا أعرف ماذا أفعل، أحتاج مساعدة`
 
 ### Complaint
-Text expressing dissatisfaction, frustration, criticism, or reporting a service/product issue.
+Text expressing dissatisfaction, frustration, criticism, or reporting a service or product issue.
 
 **Example:**  
 `الخدمة سيئة جدًا والتطبيق يتعطل كل مرة`
@@ -82,10 +107,10 @@ Text that does not strongly indicate threat, violence, distress, or complaint.
 **Example:**  
 `الجو اليوم معتدل والناس في الحديقة`
 
-## Folder Structure
+## Project Structure
 
 ```text
-obsidian-streamlit-app/
+OBSIDIAN/
 │
 ├── app.py
 ├── requirements.txt
@@ -93,6 +118,9 @@ obsidian-streamlit-app/
 ├── .gitignore
 ├── .streamlit/
 │   └── config.toml
+├── assets/
+│   ├── obsidian_logo.png
+│   └── obsidian_banner.jpeg
 ├── src/
 │   ├── inference.py
 │   ├── preprocess.py
@@ -102,35 +130,37 @@ obsidian-streamlit-app/
 ├── model/
 │   ├── config.json
 │   ├── tokenizer.json
-│   ├── tokenizer_config.json
-│   └── model.safetensors   # kept local, not pushed to GitHub
+│   └── tokenizer_config.json
 ├── data_samples/
 │   └── sample_test.csv
 └── outputs/
     └── .gitkeep
 ```
 
-## Required Model Files
+## Model Hosting Details
 
-The application requires the trained model files inside the `model/` folder.
+The fine-tuned model is hosted on Hugging Face in:
 
-Required files:
+- `SoftALL/OBSIDIAN`
+
+The Hugging Face model repo contains the following model assets:
 - `config.json`
+- `model.safetensors`
 - `tokenizer.json`
 - `tokenizer_config.json`
-- `model.safetensors`
 
-Important:
-- `model.safetensors` is large and is typically kept **local only**
-- it is ignored in Git using `.gitignore`
-- the app will not perform inference without it
+Important notes:
+- the large `model.safetensors` file is **not tracked** inside the GitHub application repo
+- the application loads the model from Hugging Face using Transformers `from_pretrained()`
+- the local `model/` folder in this repo only keeps small configuration/tokenizer files for project organization and reference
 
-## Installation Steps
+## Installation
 
 ### 1. Clone the repository
+
 ```bash
-git clone https://github.com/<your-username>/obsidian-streamlit-app.git
-cd obsidian-streamlit-app
+git clone https://github.com/SoftALL/OBSIDIAN.git
+cd OBSIDIAN
 ```
 
 ### 2. Create and activate a virtual environment
@@ -148,13 +178,11 @@ python -m venv .venv
 ```
 
 ### 3. Install dependencies
+
 ```bash
 pip install --upgrade pip
 pip install -r requirements.txt
 ```
-
-### 4. Add the model files
-Place the required model files inside the `model/` folder.
 
 ## How to Run Locally
 
@@ -170,7 +198,16 @@ Then open the local URL shown in the terminal, usually:
 http://localhost:8501
 ```
 
-## How to Use Single-Text Mode
+### Important
+Since the app loads the model from Hugging Face, you need:
+- an internet connection on first run
+- enough time for the model to download/cache the first time
+
+After the model is cached, later runs are usually faster on the same machine.
+
+## How to Use the App
+
+### Single Text Mode
 
 1. Open the **Single Text** tab
 2. Enter one Arabic sentence or tweet
@@ -181,7 +218,7 @@ http://localhost:8501
    - probability chart
    - class probability table
 
-### Example inputs
+#### Example inputs
 
 **Threat**  
 `سأقتلك إذا رأيتك مرة أخرى`
@@ -198,7 +235,7 @@ http://localhost:8501
 **Neutral**  
 `الجو اليوم معتدل والناس في الحديقة`
 
-## How to Use Batch Mode
+### Batch Upload Mode
 
 1. Open the **Batch Upload** tab
 2. Upload a CSV or XLSX file
@@ -207,12 +244,13 @@ http://localhost:8501
 5. Review:
    - uploaded data preview
    - selected text column preview
-   - progress bar during prediction
-   - results preview
+   - progress indicator
+   - classified result preview
    - predicted label distribution chart
 6. Download the full output as CSV
 
-### Supported text column names
+#### Supported text column names
+
 The app detects these names case-insensitively:
 - `cleaned_text`
 - `text`
@@ -222,16 +260,19 @@ The app detects these names case-insensitively:
 
 So columns like `Text` and `text` are both supported.
 
-### Sample test file
+## Sample Test File
+
 A small sample file is included for quick testing:
 
 ```text
 data_samples/sample_test.csv
 ```
 
-## Preprocessing Notes
+This file can be used directly in the **Batch Upload** tab.
 
-The app uses lightweight preprocessing to stay consistent with the notebook workflow and trained model assumptions.
+## Preprocessing and Inference Notes
+
+The app uses lightweight preprocessing to stay consistent with the original notebook workflow and trained model assumptions.
 
 Current preprocessing includes:
 - handling missing values
@@ -239,62 +280,62 @@ Current preprocessing includes:
 - trimming whitespace
 - collapsing repeated spaces
 
-The app avoids aggressive extra cleaning so that the input remains consistent with the trained tokenizer/model setup.
+The app avoids aggressive extra cleaning so the text stays closer to the model's expected input style.
 
-Inference is aligned with the trained model by using the appropriate token length setting.
+Inference is aligned with the trained setup by using:
+- the uploaded Hugging Face model repo
+- `max_length=128`
+
+## Deployment Notes
+
+The project has been prepared for Streamlit deployment using:
+- public GitHub code under **SoftALL/OBSIDIAN**
+- public Hugging Face model hosting under **SoftALL/OBSIDIAN**
+
+This setup is convenient for demos, but there are still tradeoffs:
+- the first cold start can be slow
+- the model is relatively large
+- a more efficient long-term architecture would separate the inference backend from the Streamlit frontend
 
 ## Current Limitations
 
-- The app depends on a local copy of `model.safetensors`
-- The model file is large and is not included in the public repo by default
-- Batch prediction is currently done row by row, so large files may take noticeable time
-- Preview tables intentionally show only a subset of rows:
+- the Hugging Face model file is large, so first-time startup can take time
+- batch prediction currently runs row by row, so large files may take noticeable time
+- preview tables intentionally show only a subset of rows:
   - uploaded data preview: first 10 rows
   - selected text preview: first 5 rows
   - results preview: first 20 rows
-- Some classes may overlap semantically in difficult examples, especially between **Threat** and **Distress**
-- Deployment to a public Streamlit service may require a separate strategy for hosting the model weights
+- some class boundaries may overlap in difficult examples, especially between **Threat** and **Distress**
+- the current architecture is suitable for demos, but not the most efficient production architecture
 
-## Notes on the Original Notebooks
+## Original Notebook Context
 
-The original notebooks were used as development and reference material for:
+The original notebooks were used as reference material for:
 - training workflow
-- inference logic
 - dataset usage
 - model configuration
+- prototype inference logic
 
-This Streamlit project is the cleaned application layer built on top of that work.
-
-## Suggested Git Workflow
-
-After making changes, use:
-
-```bash
-git add .
-git commit -m "Describe your change"
-git push
-```
-
-Example commit messages:
-- `Add README with setup and usage instructions`
-- `Improve batch upload experience`
-- `Polish Streamlit UI`
+This repository is the cleaned application layer built from that earlier notebook-based work.
 
 ## Status
 
 Current status:
-- model loading works
+- GitHub repo organized under **SoftALL**
+- Hugging Face model repo created under **SoftALL**
+- model files uploaded successfully
+- Streamlit app works locally
 - single-text prediction works
 - batch prediction works
-- progress bar works
-- sample file included
-- UI has been polished for easier use
+- sample test file included
+- project branding assets added
 
 ## Future Improvements
 
 Possible next improvements:
-- faster batch inference
-- manual selection from all columns, not only likely text columns
-- richer analytics for batch results
-- deployment strategy for model hosting
-- stronger README deployment section once final hosting approach is decided
+- split the system into **frontend + inference API**
+- keep the model loaded in a backend service instead of the Streamlit process
+- improve batch inference speed
+- add richer analytics to batch mode
+- add deployment screenshots and final public demo link
+- optimize cold-start performance for public deployment
