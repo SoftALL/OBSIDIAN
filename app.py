@@ -7,24 +7,89 @@ from src.inference import load_model_and_tokenizer, predict_text
 from src.batch import run_batch_inference, get_text_column_candidates
 from src.utils import load_uploaded_file
 
+def apply_custom_branding():
+    st.markdown(
+        """
+        <style>
+        .block-container {
+            padding-top: 1.5rem;
+            padding-bottom: 2rem;
+        }
+
+        div[data-testid="stMetric"] {
+            background-color: #101B25;
+            border: 1px solid #1D2B38;
+            padding: 1rem;
+            border-radius: 14px;
+        }
+
+        div.stButton > button {
+            background-color: #E8E0D3;
+            color: #07131C;
+            border: none;
+            border-radius: 10px;
+            font-weight: 700;
+        }
+
+        div.stButton > button:hover {
+            background-color: #D9CDB8;
+            color: #07131C;
+        }
+
+        div[data-baseweb="tab-list"] {
+            gap: 0.5rem;
+        }
+
+        div[data-baseweb="tab"] {
+            border-radius: 10px 10px 0 0;
+            padding-left: 1rem;
+            padding-right: 1rem;
+        }
+
+        .obsidian-subtitle {
+            font-size: 1.05rem;
+            color: #CFC6B8;
+            margin-top: -0.4rem;
+            margin-bottom: 0.8rem;
+        }
+
+        .obsidian-section-note {
+            color: #CFC6B8;
+            font-size: 0.95rem;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+
 st.set_page_config(page_title="OBSIDIAN Arabic Tweet Classifier", layout="wide")
+apply_custom_branding()
 
-st.title("OBSIDIAN Arabic Tweet Classifier")
-st.markdown(
-    """
-    This app uses a fine-tuned **AraBERT** model to classify Arabic tweets or short texts into **5 categories**:
+header_col1, header_col2 = st.columns([1, 3])
 
-    - **Threat**
-    - **Violence**
-    - **Distress**
-    - **Complaint**
-    - **Neutral**
-    """
-)
+with header_col1:
+    st.image("assets/obsidian_logo.png", width=190)
 
-st.info(
-    "Choose **Single Text** to classify one Arabic sentence, or **Batch Upload** to classify a CSV/XLSX file."
-)
+with header_col2:
+    st.title("OBSIDIAN")
+    st.markdown(
+        '<div class="obsidian-subtitle">Real-time social media intelligence and threat detection system</div>',
+        unsafe_allow_html=True
+    )
+    st.markdown(
+        """
+        This app uses a fine-tuned **AraBERT** model to classify Arabic tweets and short texts into **5 categories**:
+
+        - **Threat**
+        - **Violence**
+        - **Distress**
+        - **Complaint**
+        - **Neutral**
+        """
+    )
+
+st.info("Choose **Single Text** to classify one Arabic sentence, or **Batch Upload** to classify a CSV/XLSX file.")
+st.markdown("---")
 
 with st.expander("How to use this app"):
     st.markdown(
@@ -74,14 +139,14 @@ try:
 except Exception as e:
     tokenizer, model = None, None
     model_loaded = False
-    st.warning("Model could not be loaded yet. Make sure model.safetensors is placed inside the model folder.")
+    st.warning("Model could not be loaded. Please check the Hugging Face model repo connection or your internet connection.")
     st.caption(str(e))
 
 tab1, tab2 = st.tabs(["Single Text", "Batch Upload"])
 
 with tab1:
     st.subheader("Single Text Classification")
-    st.caption("Enter one Arabic text or tweet, then click Predict.")
+    st.markdown('<div class="obsidian-section-note">Enter one Arabic text or tweet, then click Predict.</div>', unsafe_allow_html=True)
 
     user_text = st.text_area("Arabic text", height=150, placeholder="اكتب النص العربي هنا...")
 
@@ -121,7 +186,7 @@ with tab1:
 
 with tab2:
     st.subheader("Batch File Classification")
-    st.caption("Upload a CSV or XLSX file, choose the text column, and run batch prediction.")
+    st.markdown('<div class="obsidian-section-note">Upload a CSV or XLSX file, choose the text column, and run batch prediction.</div>', unsafe_allow_html=True)
 
     uploaded_file = st.file_uploader("Upload CSV or XLSX file", type=["csv", "xlsx"])
     st.caption("You can test the app using the sample file provided in the repository: data_samples/sample_test.csv")

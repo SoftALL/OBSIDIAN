@@ -1,5 +1,10 @@
 [server]
 fileWatcherType = "none"
 
-[logger]
-level = "error"
+[theme]
+base = "dark"
+primaryColor = "#E8E0D3"
+backgroundColor = "#07131C"
+secondaryBackgroundColor = "#0D1A24"
+textColor = "#F5F1E8"
+font = "sans serif"
