@@ -539,7 +539,6 @@ Information & Computer Science Department
 
 - **Email:** ASALMALKI@POLICE.MOI.GOV.SA
 
-> Public repository note: personal identifiers such as national ID and personal phone number are intentionally not included in this README. Add public contact information only with the project owner’s approval.
 
 ---
 
