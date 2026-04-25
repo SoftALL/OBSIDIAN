@@ -95,8 +95,9 @@ It provides:
 - automatic text-column detection,
 - selected text-column preview,
 - batch prediction results,
+- label / keyword / minimum-confidence filters,
 - predicted label distribution chart,
-- downloadable CSV output.
+- downloadable filtered CSV output.
 
 Supported text column names include:
 
@@ -136,10 +137,14 @@ The Live Monitor displays:
 - predicted label,
 - confidence,
 - alert level,
-- label distribution chart,
-- alert-level chart,
+- label / alert-level / keyword / minimum-confidence filters,
+- label distribution pie chart,
+- tweets-per-class bar chart,
+- confidence distribution histogram,
+- alert-level bar chart,
+- high/medium alert tweets,
 - all classified tweets,
-- downloadable CSV and Excel outputs.
+- downloadable filtered CSV and Excel outputs.
 
 The live-monitoring logic includes retry support to handle intermittent webhook or external API instability.
 
@@ -332,12 +337,15 @@ Because the app loads the model from Hugging Face, the first run may take some t
 2. Upload a CSV or XLSX file.
 3. Select the text column to classify.
 4. Click **Run Batch Prediction**.
-5. Review:
+5. Review and optionally filter:
    - uploaded data preview,
    - selected text column preview,
    - classified results preview,
+   - label filter,
+   - keyword search,
+   - minimum-confidence filter,
    - predicted label distribution chart.
-6. Download the full output as CSV.
+6. Download the filtered output as CSV.
 
 ### Live Monitor Mode
 
@@ -351,17 +359,23 @@ Because the app loads the model from Hugging Face, the first run may take some t
    - X/Twitter query,
    - webhook URL through Streamlit secrets or manual input.
 5. Click **Fetch and Classify Live Tweets**.
-6. Review:
+6. Review and optionally filter:
    - fetched tweet preview,
-   - total tweets,
+   - label filter,
+   - alert-level filter,
+   - keyword search,
+   - minimum-confidence filter,
+   - total visible tweets,
    - high/medium alerts,
    - average confidence,
    - dominant label,
    - high/medium alert tweets,
-   - label distribution,
-   - alert-level distribution,
+   - label distribution pie chart,
+   - tweets-per-class bar chart,
+   - confidence distribution histogram,
+   - alert-level distribution chart,
    - all classified live tweets.
-7. Download live results as CSV or Excel.
+7. Download the filtered live results as CSV or Excel.
 
 ---
 
@@ -538,7 +552,6 @@ Information & Computer Science Department
 ### Contact
 
 - **Email:** ASALMALKI@POLICE.MOI.GOV.SA
-
 
 ---
 

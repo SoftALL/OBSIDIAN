@@ -217,6 +217,21 @@ except Exception as e:
     st.caption(str(e))
 
 
+# Session state for persistent Batch Upload results
+if "batch_result_df" not in st.session_state:
+    st.session_state["batch_result_df"] = None
+
+if "batch_selected_text_col" not in st.session_state:
+    st.session_state["batch_selected_text_col"] = None
+
+# Session state for persistent Live Monitor results
+if "live_raw_df" not in st.session_state:
+    st.session_state["live_raw_df"] = None
+
+if "live_result_df" not in st.session_state:
+    st.session_state["live_result_df"] = None
+
+
 tab1, tab2, tab3 = st.tabs(["Single Text", "Batch Upload", "Live Monitor"])
 
 
@@ -321,20 +336,97 @@ with tab2:
                     else:
                         result_df = run_batch_inference(df, tokenizer, model, selected_text_col)
 
+                        st.session_state["batch_result_df"] = result_df
+                        st.session_state["batch_selected_text_col"] = selected_text_col
+
                         st.success(
                             f"Predictions completed successfully using column: {selected_text_col}"
                         )
 
+                batch_result_df = st.session_state.get("batch_result_df")
+                batch_saved_text_col = st.session_state.get("batch_selected_text_col")
+
+                if batch_result_df is not None and batch_saved_text_col is not None:
+                    st.write("### Filters")
+
+                    batch_filter_col1, batch_filter_col2, batch_filter_col3 = st.columns(3)
+
+                    with batch_filter_col1:
+                        batch_label_options = ["All"] + sorted(
+                            batch_result_df["predicted_label"].dropna().unique().tolist()
+                        )
+                        selected_batch_label = st.selectbox(
+                            "Filter by label",
+                            options=batch_label_options,
+                            key="batch_label_filter",
+                        )
+
+                    with batch_filter_col2:
+                        batch_keyword_filter = st.text_input(
+                            "Search keyword in text",
+                            placeholder="Type Arabic keyword...",
+                            key="batch_keyword_filter",
+                        )
+
+                    with batch_filter_col3:
+                        batch_min_confidence = st.slider(
+                            "Minimum confidence",
+                            min_value=0.0,
+                            max_value=1.0,
+                            value=0.0,
+                            step=0.05,
+                            key="batch_min_confidence_filter",
+                        )
+
+                    filtered_batch_df = batch_result_df.copy()
+
+                    if selected_batch_label != "All":
+                        filtered_batch_df = filtered_batch_df[
+                            filtered_batch_df["predicted_label"] == selected_batch_label
+                        ].copy()
+
+                    if batch_keyword_filter.strip():
+                        filtered_batch_df = filtered_batch_df[
+                            filtered_batch_df[batch_saved_text_col].astype(str).str.contains(
+                                batch_keyword_filter.strip(),
+                                case=False,
+                                na=False,
+                                regex=False,
+                            )
+                        ].copy()
+
+                    if batch_min_confidence > 0:
+                        filtered_batch_df = filtered_batch_df[
+                            filtered_batch_df["confidence"] >= batch_min_confidence
+                        ].copy()
+
+                    st.caption(
+                        f"Showing {len(filtered_batch_df)} rows after filters out of "
+                        f"{len(batch_result_df)} classified rows."
+                    )
+
+                    if filtered_batch_df.empty:
+                        st.warning("No rows match the selected filters.")
+                    else:
                         results_preview_limit = 20
-                        display_cols = [selected_text_col, "predicted_label", "confidence_percent"]
+                        display_cols = [batch_saved_text_col, "predicted_label", "confidence_percent"]
+
                         st.write("### Classification Results Preview")
                         st.caption(
-                            f"{preview_caption(len(result_df), results_preview_limit)} "
-                            "Download the CSV for the full output."
+                            f"{preview_caption(len(filtered_batch_df), results_preview_limit)} "
+                            "Download the CSV for the full filtered output."
                         )
-                        st.dataframe(result_df[display_cols].head(results_preview_limit), width="stretch")
 
-                        counts = result_df["predicted_label"].value_counts().reset_index()
+                        available_display_cols = [
+                            col for col in display_cols if col in filtered_batch_df.columns
+                        ]
+
+                        st.dataframe(
+                            filtered_batch_df[available_display_cols].head(results_preview_limit),
+                            width="stretch"
+                        )
+
+                        counts = filtered_batch_df["predicted_label"].value_counts().reset_index()
                         counts.columns = ["Label", "Count"]
 
                         st.write("### Predicted Label Distribution")
@@ -346,7 +438,8 @@ with tab2:
                         )
                         st.plotly_chart(fig, width="stretch")
 
-                        csv_data = result_df.to_csv(index=False).encode("utf-8-sig")
+                        csv_data = filtered_batch_df.to_csv(index=False).encode("utf-8-sig")
+
                         st.download_button(
                             "Download Results as CSV",
                             data=csv_data,
@@ -479,18 +572,6 @@ with tab3:
                     st.warning("No tweets were returned from the selected source.")
                     st.stop()
 
-                fetched_preview_limit = 20
-                st.write("### Fetched Tweets Preview")
-                st.caption(
-                    f"{preview_caption(len(live_df), fetched_preview_limit)} "
-                    "These are the raw fetched tweets before classification."
-                )
-
-                preview_df = live_df.head(fetched_preview_limit).rename(
-                    columns={"username": "author_id"}
-                )
-                st.dataframe(preview_df, width="stretch")
-
                 with st.spinner("Classifying live tweets..."):
                     result_df = classify_live_tweets(
                         live_df,
@@ -500,129 +581,234 @@ with tab3:
                         batch_size=32,
                     )
 
-                if min_confidence > 0:
-                    result_df = result_df[result_df["confidence"] >= min_confidence].copy()
 
-                if result_df.empty:
-                    st.warning("No tweets matched the selected confidence threshold.")
-                    st.stop()
-
-                summary = get_live_summary(result_df)
+                st.session_state["live_raw_df"] = live_df
+                st.session_state["live_result_df"] = result_df
 
                 st.success("Live tweet classification completed successfully.")
 
-                metric_col1, metric_col2, metric_col3, metric_col4, metric_col5 = st.columns(5)
-
-                with metric_col1:
-                    st.metric("Total Tweets", summary["total_tweets"])
-
-                with metric_col2:
-                    st.metric("High Alerts", summary["high_alerts"])
-
-                with metric_col3:
-                    st.metric("Medium Alerts", summary["medium_alerts"])
-
-                with metric_col4:
-                    st.metric("Avg Confidence", f"{summary['average_confidence']:.2%}")
-
-                with metric_col5:
-                    st.metric("Dominant Label", summary["dominant_label"])
-
-                st.write("### High & Medium Alert Tweets")
-
-                display_cols = [
-                    "tweet_id",
-                    "timestamp",
-                    "username",
-                    "text",
-                    "predicted_label",
-                    "confidence_percent",
-                    "alert_level",
-                    "source",
-                ]
-
-                available_display_cols = [
-                    col for col in display_cols if col in result_df.columns
-                ]
-
-                high_risk_df = result_df[
-                    result_df["alert_level"].isin(["High Alert", "Medium Alert"])
-                ].copy()
-
-                if not high_risk_df.empty:
-                    st.warning("High or medium alert tweets detected.")
-
-                    high_risk_display_df = high_risk_df[available_display_cols].rename(
-                        columns={"username": "author_id"}
-                    )
-
-                    st.dataframe(
-                        high_risk_display_df,
-                        width="stretch",
-                    )
-                else:
-                    st.success("No high or medium alert tweets detected.")
-
-                counts = result_df["predicted_label"].value_counts().reset_index()
-                counts.columns = ["Label", "Count"]
-
-                st.write("### Live Label Distribution")
-                fig = px.pie(
-                    counts,
-                    names="Label",
-                    values="Count",
-                    title="Distribution of Predicted Labels in Live Monitor",
-                )
-                st.plotly_chart(fig, width="stretch")
-
-                alert_counts = result_df["alert_level"].value_counts().reset_index()
-                alert_counts.columns = ["Alert Level", "Count"]
-
-                st.write("### Alert Level Distribution")
-                alert_fig = px.bar(
-                    alert_counts,
-                    x="Alert Level",
-                    y="Count",
-                    title="Alert Levels Detected",
-                )
-                st.plotly_chart(alert_fig, width="stretch")
-
-                st.write("### All Classified Live Tweets")
-                st.caption("Showing all processed tweets after filtering by confidence threshold.")
-
-                display_result_df = result_df[available_display_cols].rename(
-                    columns={"username": "author_id"}
-                )
-
-                st.dataframe(
-                    display_result_df,
-                    width="stretch",
-                )
-
-                export_df = result_df.rename(columns={"username": "author_id"})
-
-                csv_data = export_df.to_csv(index=False).encode("utf-8-sig")
-                excel_data = dataframe_to_excel_bytes(export_df)
-
-                download_col1, download_col2 = st.columns(2)
-
-                with download_col1:
-                    st.download_button(
-                        "Download Live Results as CSV",
-                        data=csv_data,
-                        file_name="obsidian_live_results.csv",
-                        mime="text/csv",
-                        width="stretch",
-                    )
-
-                with download_col2:
-                    st.download_button(
-                        "Download Live Results as Excel",
-                        data=excel_data,
-                        file_name="obsidian_live_results.xlsx",
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                        width="stretch",
-                    )
-
             except Exception as e:
                 st.error(f"Error while running live monitor: {str(e)}")
+
+    live_raw_df = st.session_state.get("live_raw_df")
+    live_result_df = st.session_state.get("live_result_df")
+
+    if live_raw_df is not None and live_result_df is not None:
+        fetched_preview_limit = 20
+        st.write("### Fetched Tweets Preview")
+        st.caption(
+            f"{preview_caption(len(live_raw_df), fetched_preview_limit)} "
+            "These are the raw fetched tweets before classification."
+        )
+
+        preview_df = live_raw_df.head(fetched_preview_limit).rename(
+            columns={"username": "author_id"}
+        )
+        st.dataframe(preview_df, width="stretch")
+
+        st.write("### Filters")
+
+        filter_col1, filter_col2, filter_col3 = st.columns(3)
+
+        with filter_col1:
+            label_options = ["All"] + sorted(
+                live_result_df["predicted_label"].dropna().unique().tolist()
+            )
+            selected_label_filter = st.selectbox(
+                "Filter by label",
+                options=label_options,
+            )
+
+        with filter_col2:
+            alert_options = ["All"] + sorted(
+                live_result_df["alert_level"].dropna().unique().tolist()
+            )
+            selected_alert_filter = st.selectbox(
+                "Filter by alert level",
+                options=alert_options,
+            )
+
+        with filter_col3:
+            keyword_filter = st.text_input(
+                "Search keyword in tweet text",
+                placeholder="Type Arabic keyword..."
+            )
+
+        filtered_live_df = live_result_df.copy()
+
+        if selected_label_filter != "All":
+            filtered_live_df = filtered_live_df[
+                filtered_live_df["predicted_label"] == selected_label_filter
+            ].copy()
+
+        if selected_alert_filter != "All":
+            filtered_live_df = filtered_live_df[
+                filtered_live_df["alert_level"] == selected_alert_filter
+            ].copy()
+
+        if keyword_filter.strip():
+            filtered_live_df = filtered_live_df[
+                filtered_live_df["text"].astype(str).str.contains(
+                    keyword_filter.strip(),
+                    case=False,
+                    na=False,
+                    regex=False,
+                )
+            ].copy()
+
+        if min_confidence > 0:
+            filtered_live_df = filtered_live_df[
+                filtered_live_df["confidence"] >= min_confidence
+            ].copy()
+
+        st.caption(
+            f"Showing {len(filtered_live_df)} tweets after filters out of "
+            f"{len(live_result_df)} classified tweets."
+        )
+
+        if filtered_live_df.empty:
+            st.warning("No tweets match the selected filters.")
+            st.stop()
+
+        summary = get_live_summary(filtered_live_df)
+
+        metric_col1, metric_col2, metric_col3, metric_col4, metric_col5 = st.columns(5)
+
+        with metric_col1:
+            st.metric("Total Tweets", summary["total_tweets"])
+
+        with metric_col2:
+            st.metric("High Alerts", summary["high_alerts"])
+
+        with metric_col3:
+            st.metric("Medium Alerts", summary["medium_alerts"])
+
+        with metric_col4:
+            st.metric("Avg Confidence", f"{summary['average_confidence']:.2%}")
+
+        with metric_col5:
+            st.metric("Dominant Label", summary["dominant_label"])
+
+        st.write("### High & Medium Alert Tweets")
+
+        display_cols = [
+            "tweet_id",
+            "timestamp",
+            "username",
+            "text",
+            "predicted_label",
+            "confidence_percent",
+            "alert_level",
+            "source",
+        ]
+
+        available_display_cols = [
+            col for col in display_cols if col in live_result_df.columns
+        ]
+
+        high_risk_df = filtered_live_df[
+            filtered_live_df["alert_level"].isin(["High Alert", "Medium Alert"])
+        ].copy()
+
+        if not high_risk_df.empty:
+            st.warning("High or medium alert tweets detected.")
+
+            high_risk_display_df = high_risk_df[available_display_cols].rename(
+                columns={"username": "author_id"}
+            )
+
+            st.dataframe(
+                high_risk_display_df,
+                width="stretch",
+            )
+        else:
+            st.success("No high or medium alert tweets detected.")
+
+        counts = filtered_live_df["predicted_label"].value_counts().reset_index()
+        counts.columns = ["Label", "Count"]
+
+        st.write("### Live Label Distribution")
+        fig = px.pie(
+            counts,
+            names="Label",
+            values="Count",
+            title="Distribution of Predicted Labels in Live Monitor",
+        )
+        st.plotly_chart(fig, width="stretch")
+        st.write("### Tweets per Class")
+        bar_fig = px.bar(
+            counts,
+            x="Label",
+            y="Count",
+            text="Count",
+            title="Number of Tweets per Predicted Class",
+        )
+
+        bar_fig.update_traces(textposition="outside")
+        bar_fig.update_layout(yaxis_title="Number of Tweets")
+
+        st.plotly_chart(bar_fig, width="stretch")
+
+        alert_counts = filtered_live_df["alert_level"].value_counts().reset_index()
+        alert_counts.columns = ["Alert Level", "Count"]
+        st.write("### Confidence Distribution")
+
+        confidence_fig = px.histogram(
+            filtered_live_df,
+            x="confidence",
+            nbins=20,
+            title="Distribution of Prediction Confidence Scores",
+        )
+
+        confidence_fig.update_layout(
+            xaxis_title="Confidence Score",
+            yaxis_title="Number of Tweets",
+        )
+
+        st.plotly_chart(confidence_fig, width="stretch")
+
+        st.write("### Alert Level Distribution")
+        alert_fig = px.bar(
+            alert_counts,
+            x="Alert Level",
+            y="Count",
+            title="Alert Levels Detected",
+        )
+        st.plotly_chart(alert_fig, width="stretch")
+
+        st.write("### All Classified Live Tweets")
+        st.caption("Showing all processed tweets after applying the selected filters.")
+
+        display_result_df = filtered_live_df[available_display_cols].rename(
+            columns={"username": "author_id"}
+        )
+
+        st.dataframe(
+            display_result_df,
+            width="stretch",
+        )
+
+        export_df = filtered_live_df.rename(columns={"username": "author_id"})
+
+        csv_data = export_df.to_csv(index=False).encode("utf-8-sig")
+        excel_data = dataframe_to_excel_bytes(export_df)
+
+        download_col1, download_col2 = st.columns(2)
+
+        with download_col1:
+            st.download_button(
+                "Download Live Results as CSV",
+                data=csv_data,
+                file_name="obsidian_live_results.csv",
+                mime="text/csv",
+                width="stretch",
+            )
+
+        with download_col2:
+            st.download_button(
+                "Download Live Results as Excel",
+                data=excel_data,
+                file_name="obsidian_live_results.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                width="stretch",
+            )
