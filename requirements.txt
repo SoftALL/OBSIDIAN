@@ -9,3 +9,4 @@ numpy
 scikit-learn
 torchvision
 huggingface_hub
+requests

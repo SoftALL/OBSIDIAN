@@ -6,6 +6,14 @@ from src.preprocess import clean_text
 from src.inference import load_model_and_tokenizer, predict_text
 from src.batch import run_batch_inference, get_text_column_candidates
 from src.utils import load_uploaded_file
+from src.live import (
+    load_demo_live_tweets,
+    fetch_live_tweets_from_n8n,
+    classify_live_tweets,
+    get_live_summary,
+    dataframe_to_excel_bytes,
+)
+
 
 def apply_custom_branding():
     st.markdown(
@@ -97,6 +105,19 @@ def apply_custom_branding():
         unsafe_allow_html=True
     )
 
+
+def preview_caption(total_rows: int, preview_limit: int) -> str:
+    """
+    Returns a smart preview caption based on the number of available rows.
+    """
+    shown_rows = min(total_rows, preview_limit)
+
+    if total_rows > preview_limit:
+        return f"Showing first {shown_rows} rows only out of {total_rows} total rows."
+
+    return f"Showing all {shown_rows} rows."
+
+
 st.set_page_config(page_title="OBSIDIAN Arabic Tweet Classifier", layout="wide")
 apply_custom_branding()
 
@@ -149,6 +170,11 @@ with exp_col1:
             - Select the text column to classify
             - Click **Run Batch Prediction**
             - Review the preview, label distribution chart, and download the full results
+
+            **Live Monitor**
+            - Use demo mode to simulate real-time Arabic tweet monitoring
+            - Or connect an n8n webhook if available
+            - Fetch tweets, classify them, review alerts, and download results
             """
         )
 
@@ -185,16 +211,23 @@ try:
 except Exception as e:
     tokenizer, model = None, None
     model_loaded = False
-    st.warning("Model could not be loaded. Please check the Hugging Face model repo connection or your internet connection.")
+    st.warning(
+        "Model could not be loaded. Please check the Hugging Face model repo connection or your internet connection."
+    )
     st.caption(str(e))
 
-tab1, tab2 = st.tabs(["Single Text", "Batch Upload"])
+
+tab1, tab2, tab3 = st.tabs(["Single Text", "Batch Upload", "Live Monitor"])
+
 
 with tab1:
     st.subheader("Single Text Classification")
-    st.markdown('<div class="obsidian-section-note">Enter one Arabic text or tweet, then click Predict.</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="obsidian-section-note">Enter one Arabic text or tweet, then click Predict.</div>',
+        unsafe_allow_html=True
+    )
 
-    user_text = st.text_area("Arabic text", height=150, placeholder= "Enter Arabic text here...")
+    user_text = st.text_area("Arabic text", height=150, placeholder="Enter Arabic text here...")
 
     if st.button("Predict", width="stretch"):
         if not user_text.strip():
@@ -230,12 +263,17 @@ with tab1:
             st.write("### Class Probability Table")
             st.dataframe(probs_df, width="stretch")
 
+
 with tab2:
     st.subheader("Batch File Classification")
-    st.markdown('<div class="obsidian-section-note">Upload a CSV or XLSX file, choose the text column, and run batch prediction.</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="obsidian-section-note">Upload a CSV or XLSX file, choose the text column, and run batch prediction.</div>',
+        unsafe_allow_html=True
+    )
 
     uploaded_file = st.file_uploader("Upload CSV or XLSX file", type=["csv", "xlsx"])
     st.caption("You can test the app using the sample file provided in the repository: data_samples/sample_test.csv")
+
     if uploaded_file is not None:
         try:
             df = load_uploaded_file(uploaded_file)
@@ -244,9 +282,11 @@ with tab2:
             total_cols = len(df.columns)
 
             st.write(f"Uploaded file contains **{total_rows} rows** and **{total_cols} columns**.")
+
+            uploaded_preview_limit = 10
             st.write("### Uploaded Data Preview")
-            st.caption("Showing first 10 rows only.")
-            st.dataframe(df.head(10), width="stretch")
+            st.caption(preview_caption(total_rows, uploaded_preview_limit))
+            st.dataframe(df.head(uploaded_preview_limit), width="stretch")
 
             candidate_cols = get_text_column_candidates(df)
 
@@ -269,9 +309,10 @@ with tab2:
             if selected_text_col is not None:
                 st.caption(f"Selected text column: {selected_text_col}")
 
-                preview_df = df[[selected_text_col]].head(5).copy()
+                selected_text_preview_limit = 5
+                preview_df = df[[selected_text_col]].head(selected_text_preview_limit).copy()
                 st.write("### Selected Text Column Preview")
-                st.caption("Showing first 5 rows only.")
+                st.caption(preview_caption(total_rows, selected_text_preview_limit))
                 st.dataframe(preview_df, width="stretch")
 
                 if st.button("Run Batch Prediction", width="stretch"):
@@ -284,10 +325,14 @@ with tab2:
                             f"Predictions completed successfully using column: {selected_text_col}"
                         )
 
+                        results_preview_limit = 20
                         display_cols = [selected_text_col, "predicted_label", "confidence_percent"]
                         st.write("### Classification Results Preview")
-                        st.caption("Showing first 20 rows only. Download the CSV for the full output.")
-                        st.dataframe(result_df[display_cols].head(20), width="stretch")
+                        st.caption(
+                            f"{preview_caption(len(result_df), results_preview_limit)} "
+                            "Download the CSV for the full output."
+                        )
+                        st.dataframe(result_df[display_cols].head(results_preview_limit), width="stretch")
 
                         counts = result_df["predicted_label"].value_counts().reset_index()
                         counts.columns = ["Label", "Count"]
@@ -312,3 +357,272 @@ with tab2:
 
         except Exception as e:
             st.error(f"Error while processing file: {str(e)}")
+
+
+with tab3:
+    st.subheader("Live Tweet Monitor")
+    st.markdown(
+        '<div class="obsidian-section-note">Simulate or fetch near real-time Arabic tweets, classify them, and generate alert-level insights.</div>',
+        unsafe_allow_html=True
+    )
+
+    st.info(
+        "Demo mode is stable for presentations. n8n mode uses Abdullah's live workflow "
+        "with postLimit, timeWindowHours, and xQuery. If the live workflow fails, retry once "
+        "or reduce the tweet limit."
+    )
+
+    source_mode = st.radio(
+        "Select live data source",
+        options=["Demo Simulation", "n8n Webhook"],
+        horizontal=True,
+    )
+
+    col_a, col_b = st.columns(2)
+
+    with col_a:
+        tweet_limit = st.slider(
+            "Number of tweets to process",
+            min_value=5,
+            max_value=100,
+            value=25,
+            step=5,
+        )
+
+    with col_b:
+        min_confidence = st.slider(
+            "Minimum confidence to display",
+            min_value=0.0,
+            max_value=1.0,
+            value=0.0,
+            step=0.05,
+        )
+
+    webhook_url = ""
+    time_window_hours = 1
+    query = "place_country:SA lang:ar"
+
+    if source_mode == "n8n Webhook":
+        st.write("### n8n Fetch Settings")
+
+        n8n_col1, n8n_col2 = st.columns(2)
+
+        with n8n_col1:
+            time_window_hours = st.number_input(
+                "Time window in hours",
+                min_value=1,
+                max_value=24,
+                value=1,
+                step=1,
+            )
+
+        with n8n_col2:
+            query = st.text_input(
+                "X/Twitter query",
+                value="place_country:SA lang:ar",
+            )
+
+        secret_webhook_url = st.secrets.get("N8N_WEBHOOK_URL", "")
+
+        if secret_webhook_url:
+            st.success("n8n webhook URL loaded from Streamlit secrets.")
+            use_secret_webhook = st.checkbox(
+                "Use webhook URL from Streamlit secrets",
+                value=True,
+            )
+
+            if use_secret_webhook:
+                webhook_url = secret_webhook_url
+            else:
+                webhook_url = st.text_input(
+                    "n8n webhook URL",
+                    type="password",
+                    placeholder="Paste another n8n webhook URL here..."
+                )
+        else:
+            st.warning("No n8n webhook URL found in Streamlit secrets.")
+            webhook_url = st.text_input(
+                "n8n webhook URL",
+                type="password",
+                placeholder="Paste the n8n webhook URL here..."
+            )
+
+        st.caption(
+            "For deployment, store the webhook URL in Streamlit secrets as "
+            "`N8N_WEBHOOK_URL`. Avoid hardcoding private URLs in GitHub."
+        )
+
+    if st.button("Fetch and Classify Live Tweets", width="stretch"):
+        if not model_loaded:
+            st.error("Model is not loaded.")
+        else:
+            try:
+                with st.spinner("Fetching tweets..."):
+                    if source_mode == "Demo Simulation":
+                        live_df = load_demo_live_tweets(limit=tweet_limit)
+                    else:
+                        if not webhook_url.strip():
+                            st.error("Please enter the n8n webhook URL first.")
+                            st.stop()
+
+                        live_df = fetch_live_tweets_from_n8n(
+                            webhook_url=webhook_url.strip(),
+                            limit=tweet_limit,
+                            time_window_hours=int(time_window_hours),
+                            query=query.strip() or "place_country:SA lang:ar",
+                            timeout=180,
+                            max_retries=2,
+                            retry_delay=3,
+                        )
+
+                if live_df.empty:
+                    st.warning("No tweets were returned from the selected source.")
+                    st.stop()
+
+                fetched_preview_limit = 20
+                st.write("### Fetched Tweets Preview")
+                st.caption(
+                    f"{preview_caption(len(live_df), fetched_preview_limit)} "
+                    "These are the raw fetched tweets before classification."
+                )
+
+                preview_df = live_df.head(fetched_preview_limit).rename(
+                    columns={"username": "author_id"}
+                )
+                st.dataframe(preview_df, width="stretch")
+
+                with st.spinner("Classifying live tweets..."):
+                    result_df = classify_live_tweets(
+                        live_df,
+                        tokenizer,
+                        model,
+                        text_col="text",
+                        batch_size=32,
+                    )
+
+                if min_confidence > 0:
+                    result_df = result_df[result_df["confidence"] >= min_confidence].copy()
+
+                if result_df.empty:
+                    st.warning("No tweets matched the selected confidence threshold.")
+                    st.stop()
+
+                summary = get_live_summary(result_df)
+
+                st.success("Live tweet classification completed successfully.")
+
+                metric_col1, metric_col2, metric_col3, metric_col4, metric_col5 = st.columns(5)
+
+                with metric_col1:
+                    st.metric("Total Tweets", summary["total_tweets"])
+
+                with metric_col2:
+                    st.metric("High Alerts", summary["high_alerts"])
+
+                with metric_col3:
+                    st.metric("Medium Alerts", summary["medium_alerts"])
+
+                with metric_col4:
+                    st.metric("Avg Confidence", f"{summary['average_confidence']:.2%}")
+
+                with metric_col5:
+                    st.metric("Dominant Label", summary["dominant_label"])
+
+                st.write("### High & Medium Alert Tweets")
+
+                display_cols = [
+                    "tweet_id",
+                    "timestamp",
+                    "username",
+                    "text",
+                    "predicted_label",
+                    "confidence_percent",
+                    "alert_level",
+                    "source",
+                ]
+
+                available_display_cols = [
+                    col for col in display_cols if col in result_df.columns
+                ]
+
+                high_risk_df = result_df[
+                    result_df["alert_level"].isin(["High Alert", "Medium Alert"])
+                ].copy()
+
+                if not high_risk_df.empty:
+                    st.warning("High or medium alert tweets detected.")
+
+                    high_risk_display_df = high_risk_df[available_display_cols].rename(
+                        columns={"username": "author_id"}
+                    )
+
+                    st.dataframe(
+                        high_risk_display_df,
+                        width="stretch",
+                    )
+                else:
+                    st.success("No high or medium alert tweets detected.")
+
+                counts = result_df["predicted_label"].value_counts().reset_index()
+                counts.columns = ["Label", "Count"]
+
+                st.write("### Live Label Distribution")
+                fig = px.pie(
+                    counts,
+                    names="Label",
+                    values="Count",
+                    title="Distribution of Predicted Labels in Live Monitor",
+                )
+                st.plotly_chart(fig, width="stretch")
+
+                alert_counts = result_df["alert_level"].value_counts().reset_index()
+                alert_counts.columns = ["Alert Level", "Count"]
+
+                st.write("### Alert Level Distribution")
+                alert_fig = px.bar(
+                    alert_counts,
+                    x="Alert Level",
+                    y="Count",
+                    title="Alert Levels Detected",
+                )
+                st.plotly_chart(alert_fig, width="stretch")
+
+                st.write("### All Classified Live Tweets")
+                st.caption("Showing all processed tweets after filtering by confidence threshold.")
+
+                display_result_df = result_df[available_display_cols].rename(
+                    columns={"username": "author_id"}
+                )
+
+                st.dataframe(
+                    display_result_df,
+                    width="stretch",
+                )
+
+                export_df = result_df.rename(columns={"username": "author_id"})
+
+                csv_data = export_df.to_csv(index=False).encode("utf-8-sig")
+                excel_data = dataframe_to_excel_bytes(export_df)
+
+                download_col1, download_col2 = st.columns(2)
+
+                with download_col1:
+                    st.download_button(
+                        "Download Live Results as CSV",
+                        data=csv_data,
+                        file_name="obsidian_live_results.csv",
+                        mime="text/csv",
+                        width="stretch",
+                    )
+
+                with download_col2:
+                    st.download_button(
+                        "Download Live Results as Excel",
+                        data=excel_data,
+                        file_name="obsidian_live_results.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        width="stretch",
+                    )
+
+            except Exception as e:
+                st.error(f"Error while running live monitor: {str(e)}")
